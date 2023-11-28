@@ -90,11 +90,11 @@ class CarObj:
                             [[0,0,1],[1,0,0]], [[0,0,1],[0,1,0]], [[0,0,1],[0,0,1]]
                             ]
         #Hyper-parameters for the "Deep Q Learning"
-        self.gamma= 0.99
-        self.epsilon = 1.0
-        self.epsilon_dec = 0.99
-        self.epsilon_min = 0.10
-        self.batch_size = 64
+        self.gamma= 0.99            #Scale of "Future Rewards" in the Q-equation in learn()
+        self.epsilon = 1.0          #Exploration % chance.  Starts high and lowers.
+        self.epsilon_dec = 0.99     #Decay factor of epsilon
+        self.epsilon_min = 0.10     #Floor of epsilon
+        self.batch_size = 64        #Sample size of Memory during learn()
         self.memory = ReplayBuffer(1_000_000, 8, 12, discrete=True)
         #Randomly Seeded Neural Network
         self.create_new_model() 
@@ -216,7 +216,7 @@ class CarObj:
         Written by Dan.
         Car picks the next action with threshold of random choices to factiltate exploration.
         make_decision is 0% exploration and 100% exploitation while
-        Explore() is Epislon% Expliration and 100-Epsilon % exploitation.
+        Explore() is Epislon% Exploration and (100-Epsilon)% exploitation.
 
         Output is 1 hot matrix, like [[1,0,0],[0,1,0]]
         """
@@ -227,8 +227,8 @@ class CarObj:
         else: 
             outcome = self.model.predict(state)
             action = [[0,0,0],[0,0,0]]
-            action[np.argmax(outcome[0])] = 1
-            action[np.argmax(outcome[1])] = 1
+            action[0][np.argmax(outcome[0])] = 1
+            action[1][np.argmax(outcome[1])] = 1
         return action
 
     def learn(self):
