@@ -234,9 +234,35 @@ class CarObj:
     def learn(self):
         """
         Written by Dan.
-        TBD
+        Car will take a sample of the Memory and then fit the model to be better.
+        Ie, MAGIC!
         """
-        pass
+        if self.memory.mem_cntr > self.batch_size: #Not enough data to sample.
+            state, action, reward, new_state, done = self.memory,sample_buffer(self.batch_size)
+
+            action_avlues = np.array(self.action_space, dtype=np.int8)
+            action_indices = np.dot(action, action_values) #Dan thinks this line will break.
+
+            q_eval = self.model.predict(state)
+
+            q_next = self.model.predict(new_state)
+
+            q_target = q_eval.copy()
+
+            batch_index = np.arrange(self.batch_size, dtype=np.int32)
+
+            q_target[batch_index, action_indices] = reward + \
+                    self.gamma*np.max(q_next, axis=1)*done
+            #This is where Dan thought it would break.  [[0,1,0],[0, 0,1]] is not a one-hot vector 
+            #for the dotproduct to give the indices of the actions for this 2D matrix.
+
+            #Train the model.
+            _self.model.fit(state, q_target, verbose=0)
+
+            #Decrease the Exploration % chance until it reaches floor.
+            self.epsilon = self.epsilon*self.epsilon_dec if self.epsilon > \
+                    self.epsilon_min else self.epsilon_min
+
 
     def update_Carposition(self): # calculate and update the car's center and tires.
         #[0][0][Ft1]----------[0][1][Ft2]
@@ -412,12 +438,13 @@ class ReplayBuffer:
         self.new_state_memory[index] = state_
         #Store one hot encoding of actions, if appropiate.
         #Dan Change this latter to [[0,0,1],[1,0,0]] (ie, 2x3 one of zeroes)
-        if self.discrete:  
-            actions = np.zeros(self.action_memory.shape[1])   
-            actions[action] = 1.0
-            self.action_memory[index] = actions
-        else:
-            self.action_memory[index] = action
+        #if self.discrete:  
+        #    actions = np.zeros(self.action_memory.shape[1])   
+        #    actions[action] = 1.0
+        #    self.action_memory[index] = actions
+        #else:
+            #self.action_memory[index] = action
+        self.action_memory[index] = action
         self.reward_memory[index] = reward
         self.terminal_memory = 1 - done
         self.mem_cntr += 1
