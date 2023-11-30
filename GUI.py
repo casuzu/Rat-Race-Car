@@ -94,6 +94,8 @@ class TrainFrame(Frame):
     def __init__(self, screen):
         super().__init__(screen)
         self.__training=False
+        self.__SaveFlag=False
+        self.__LoadFlag=False
         self._buttontext=["Start", "Save", "Load", "Back"]
         self.__hudcolor=(207,129,27)
         self.__hudrect=pygame.Rect(0, 0, 1200, 100)
@@ -106,7 +108,14 @@ class TrainFrame(Frame):
             self._buttonheight
             )
             self._buttons.append(button)
-        
+    def getSaveFlag(self):
+        return self.__SaveFlag
+    def setSaveFlag(self, s:bool):
+        self.__SaveFlag=s
+    def getLoadFlag(self):
+        return self.__LoadFlag
+    def setLoadFlag(self, l:bool):
+        self.__LoadFlag=l
     def _draw(self):
         self.screen.fill((50, 153, 50))
         self.screen.blit(self._image, (0,0))
@@ -161,16 +170,20 @@ class TrainFrame(Frame):
                     if button.collidepoint(event.pos):
                         if i == 0 and self.__training==False:
                             self.__training=True
-                            background_thread=threading.Thread(target=self.animate)
-                            background_thread.daemon=True
-                            background_thread.start()
+                            #background_thread=threading.Thread(target=self.animate)
+                            #background_thread.daemon=True
+                            #background_thread.start()
                             print("Start button clicked")
                         elif i == 1:
+                            self.__SaveFlag=True
                             print("Save button clicked")
                         elif i == 2:
+                            self.__LoadFlag=True
                             print("Load button clicked")
                         elif i==3:
                             print("Back is pressed")
+                            self.__SaveFlag=False
+                            self.__LoadFlag=False
                             self.__training=False
                             self._toMainFrame=True
                 
