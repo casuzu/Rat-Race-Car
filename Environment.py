@@ -2,44 +2,43 @@ import numpy as np
 #import math as m
 from matplotlib import pyplot as plt
 from Car import CarObj
+from PIL import Image
 
 def TRACK_ROW():
-    return 1572
+    return 20
 
 def TRACK_COL():
-    return 2000
+    return 20
 
 def RACE_TRACK(filename):
-    #Edited by Dan.
+    # Edited by Dan.
     image = Image.open(filename)
     data = np.asarray(image)
-    track = np.zeros(TRACK_COL()*TRACK_ROW()).reshape(TRACK_ROW(), TRACK_COL())
+    track = np.zeros(TRACK_COL() * TRACK_ROW()).reshape(TRACK_ROW(), TRACK_COL())
 
     for x in range(TRACK_COL()):
         for y in range(TRACK_ROW()):
             total = sum(data[y, x])
             r, g, b = data[y, x]
             if total < 90:
-                #Asphalt represented by 1
+                # Asphalt represented by 1
                 track[y, x] = 1
-            elif total > 90 and total < 350 and (r>(g+b)):
-                #Gates represented by 2
+            elif total > 90 and total < 350 and (r > (g + b)):
+                # Gates represented by 2
                 track[y, x] = 2
             elif total > 250 and total < 800:
-                #Grass reprsented by 0
-                track[y, x] = 0  
+                # Grass reprsented by 0
+                track[y, x] = 0
 
-    #Fix a few single cells that where not asphalt when all four sides were.
-    for x in range(1, TRACK_COL()-1):
-        for y in range(1, TRACK_ROW()-1):
-            if track[y+1, x]==1 and track[y, x+1]==1 and track[y-1, x]==1 and track[y, x-1]==1:
+                # Fix a few single cells that where not asphalt when all four sides were.
+    for x in range(1, TRACK_COL() - 1):
+        for y in range(1, TRACK_ROW() - 1):
+            if track[y + 1, x] == 1 and track[y, x + 1] == 1 and track[y - 1, x] == 1 and track[y, x - 1] == 1:
                 track[y, x] = 1
-    return track    
-    ##### OLD CODE #####
+    return track
     #listnum = np.genfromtxt(filename, delimiter=',')
     #reshaped_listnum = listnum.reshape(TRACK_ROW(), TRACK_COL())
     #return reshaped_listnum
-    ##### OLD CODE #####
 
 def track_displayer(list_data):
     #list1 = np.array([[1000, 300]])
@@ -51,8 +50,7 @@ def track_displayer(list_data):
     plt.show()
     #plt.draw()
 
-def NUM_OF_DRIVERS():
-     return len(racers_name)
+
 
 def PIXEL_LENGTH():
     return 50
@@ -60,9 +58,10 @@ def PIXEL_LENGTH():
 
 
 
-class Environment:
-    def __init__(self, track_file, start_position, orientation):
+class EnvironmentClass:
+    def __init__(self, track_file, start_position, orientation, racers_names):
         # Matrix for the track
+        self.racers_names = racers_names# arrays of racers' names
         self.TRACK_MAT = RACE_TRACK(track_file)
         self.__carlist = []
         self.__cars_adjust(orientation)  # orient the cars'facing directions
@@ -70,15 +69,19 @@ class Environment:
         self.__load_cars()  # loads the cars into their starting positions and stores in carlist
 
 
+    def NUM_OF_DRIVERS(self):
+        return len(self.racers_names)
+
     def __load_cars(self):
 
-        for i in range(0, NUM_OF_DRIVERS()):  # initialize the drivers car starting positions
-            __car_obj = CarObj(racers_name[i], self.__all_cars_start_pos, self.orient_angle)
+        for i in range(0, self.NUM_OF_DRIVERS()):  # initialize the drivers car starting positions
+            __car_obj = CarObj(self.racers_names[i], self.__all_cars_start_pos, self.orient_angle)
             self.__carlist.append(__car_obj)
 
 
+
     def reset_cars(self):
-        for i in range(0, NUM_OF_DRIVERS()):
+        for i in range(0, self.NUM_OF_DRIVERS()):
             self.__carlist[i].front_bumper_pos = self.__all_cars_start_pos
             self.__carlist[i].car_theta = self.orient_angle
             self.__carlist[i].update_Carposition()
@@ -99,39 +102,78 @@ class Environment:
            self.orient_angle = 270
 
 
-    def track(self, x, y):
-        z = self.TRACK_MAT[x, y]
-        return z
 
     def car_get(self, i):
         result = self.__carlist[i]
         return result
 
 
+    def reward(self, car):
+        reward = 0
+        x, y = car.front_bumper_history[-1][0], car.front_bumper_history[-1][1]
+        if self.TRACK_MAT[int(x), int(y)] == 0:
+            print("The spot was in the grass.")
+            return -30
 
-file_name = r"Track.csv"
+        hist_length = len(car.front_bumper_history)
 
-#racers_name = ["Chibu", "Kefe", "Dan", "Nick", "Rupo", "Mike"]
-racers_name = ["Chibu"]
+        if hist_length > 1:
+            present_fbumper = car.front_bumper_history[- 1]
+            past_fbumper = car.front_bumper_history[-2]
+            slope = (present_fbumper[1] - past_fbumper[1])/(present_fbumper[0] - past_fbumper[0])
 
-#                     start_position     car_orientation
-env = Environment(file_name, [1000, 300], "East")
+            for x in range(int(past_fbumper[0]), int(present_fbumper[0]) + 1):
+                fx = int(slope*(x-past_fbumper[0]) + past_fbumper[1])
+                print("[x fx] = [", x, " ", fx," ", self.TRACK_MAT[x, fx],"]")
+                if self.TRACK_MAT[x][fx] == 2:
+                    reward = 100
+
+        return reward
 
 
-for j in range(0, NUM_OF_DRIVERS()):
-    car_item = env.car_get(j)
-    print("============================")
-    print(car_item.racer_name)
-    print("============================")
-    car_item.run()
 
-    for step in range(0, len(car_item.tires_history)):
-        print(step)
-        #print(car_item.tires_history[step])
-        #print(car_item.front_bumper_history[step])
 
-    track_displayer(env.TRACK_MAT)
 
+    #kefe dq
+
+    def get_input_distances(self, car):
+        distances = []  # Distance of the car's eight radars to the boundary
+        x, y = car.front_bumper_pos
+        distances.append(self.__get_distance_to_boundary(x, y))
+
+        return distances  # A list of eight integers.
+
+    def __get_distance_to_boundary(self, x, y):
+        distances = []
+
+        # Define directions (north, 45 degrees northeast, east, etc.)
+        directions = [(0, -1), (-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1)]
+
+        # Iterate through each direction
+        for direction in directions:
+            dx, dy = direction
+            distance = 0
+
+            # Move in the current direction until reaching the track boundary
+            while self.TRACK_MAT[x, y] != 0:  # Assuming 0 represents the grass
+                x += dx
+                y += dy
+                distance += 1
+
+            distances.append(distance)
+
+        return distances
+
+    def disqualification_check(self, car):
+        # Check if any tire of any car is at the track boundary (pixel value of 0 or 1)
+        tires_coordinates = car.tires_history[-1]
+        #print("\n", tires_coordinates)
+        for tire in tires_coordinates:
+            x, y = tire
+            if self.TRACK_MAT[int(x)][int(y)] == 0:
+                return True  # Car is off track.
+        return False  # All cars are on the track.
+    # Add code for crossing the finish line.
 
 
 
